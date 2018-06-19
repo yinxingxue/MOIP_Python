@@ -8,18 +8,17 @@ import moipSol
 import math
 
 class NaiveSol(BaseSol):  
-    
-    solveCounter = 0
-    objConstrIndexList = []
-    boundsDict = {}
- 
+    'define the epsilon-constraint solution of a MOBIP'
     def __init__(self, moipProblem):  
         #调用父类的构函  
         BaseSol.__init__(self,moipProblem)  
+        self.solveCounter = 0
+        self.objConstrIndexList = []
+        self.boundsDict = {}
        
     #覆写父类的方法  
     def execute(self):  
-        print("%s" % ("Starting solving the problem with epislon-constraint!")) 
+        print("%s" % ("Starting solving the problem with epsilon-constraint!")) 
         constCounter = self.solver.linear_constraints.get_num()
         self.objConstrIndexList =[]
         
@@ -62,7 +61,11 @@ class NaiveSol(BaseSol):
             self.constrIndexList.append(indices)
         
         #start to solving
+        print ("Before the epsilon constraint, the adjusted UBs of the objective 2 to k: ", self.getSolverObjConstraintUBs())
         self.travelAllObjConstr(1)
+        print ("After the epsilon constraint, the adjusted UBs of the objective 2 to k: ", self.getSolverObjConstraintUBs())
+        #debugging purpose
+        #print (self.solveCounter)
     
     """
     level:
@@ -78,8 +81,7 @@ class NaiveSol(BaseSol):
                 passDict['o'+str(level)+'_R']=value
                 self.updateSolver(passDict)
                 self.solveCounter += 1
-                print (self.solveCounter)
-                continue
+                #continue
                 self.solver.solve()
                 #debugging purpose
                 #print ("Solution value  = ", self.solver.solution.get_objective_value())
@@ -87,11 +89,10 @@ class NaiveSol(BaseSol):
                 #xsol = self.solver.solution.get_values()
                 #debugging purpose
                 #print ('xsol = ',  xsol )
-                if(self.solver.solution.get_status_string()!='optimal'):
+                if(self.solver.solution.get_status_string().find("optimal")==-1):
                     continue
                 cplexResults = CplexSolResult(self.solver.solution,self.moipProblem)
-                self.cplexSolutionSet.append(cplexResults)
-                self.cplexResultMap[cplexResults.getResultID()] = cplexResults
+                self.addTocplexSolutionSetMap(cplexResults)
         else: 
             (ub,lb)=  self.boundsDict[level]
             ub_relaxed= math.ceil(ub)
@@ -103,6 +104,14 @@ class NaiveSol(BaseSol):
     def updateSolver(self,passDict):
         for constrName in passDict:
             self.solver.linear_constraints.set_rhs(constrName, passDict[constrName])
+            
+    def getSolverObjConstraintUBs(self):
+        objUBs = []
+        for k in range(1,len(self.moipProblem.attributeMatrix)):
+            constrName= 'o'+str(k)+'_R'
+            objUB = self.solver.linear_constraints.get_rhs(constrName)
+            objUBs.append(objUB)
+        return objUBs
         
     def calculteUBLB(self,obj):
         ub = 0.0
@@ -125,7 +134,7 @@ if __name__ == "__main__":
     prob = MOIPProblem(4,12,3)  
     prob.displayObjectiveCount()
     prob.displayFeatureCount()
-    prob.exetractFromFile("parameter_js.txt")
+    prob.exetractFromFile("../test/parameter_js.txt")
     prob.displayObjectives()
     prob.displayVariableNames()
     prob.displayObjectiveSparseMapList()

@@ -9,32 +9,31 @@ import re
 class MOIPProblem:
     'define the problem of a MOBIP'
     
-    
-    objectiveCount = 0 
-    featureCount = 0 
-    attributeCount = 0
-    
-    objectNames = {}
-    featureNames = {}
-    attributeNames = {}
-    """
-    each sparse map is to represent one objectives, and use the list to store all the objectives maps
-    """
-    objectiveSparseMapList = [] 
-    
-    """
-    each sparse map is to represent one constraint in inequation, and use the list to store all the inequation constraints
-    """
-    sparseInequationsMapList = [] 
-    
-    """
-    each sparse map is to represent one constraint in equation, and use the list to store all the equation constraints
-    """
-    sparseEquationsMapList = []
-    
-    attributeMatrix = [[]]
-    
     def __init__(self, objCount, varCount, attrCount):
+        
+        self.objectiveCount = 0 
+        self.featureCount = 0 
+        self.attributeCount = 0
+    
+        self.objectNames = {}
+        self.featureNames = {}
+        self.attributeNames = {}
+        """
+        each sparse map is to represent one objectives, and use the list to store all the objectives maps
+        """
+        self.objectiveSparseMapList = [] 
+    
+        """
+        each sparse map is to represent one constraint in inequation, and use the list to store all the inequation constraints
+        """
+        self.sparseInequationsMapList = [] 
+    
+        """
+        each sparse map is to represent one constraint in equation, and use the list to store all the equation constraints
+        """
+        self.sparseEquationsMapList = []
+    
+        self.attributeMatrix = [[]]
         self.objectiveCount = objCount
         self.featureCount = varCount
         self.attributeCount = attrCount
@@ -216,7 +215,7 @@ if __name__ == "__main__":
     prob = MOIPProblem(4,43,3)  
     prob.displayObjectiveCount()
     prob.displayFeatureCount()
-    prob.exetractFromFile("parameter.txt")
+    prob.exetractFromFile("../test/parameter_wp.txt")
     prob.displayObjectives()
     prob.displayVariableNames()
     prob.displayObjectiveSparseMapList()

@@ -12,28 +12,30 @@ from cplex.exceptions import CplexError
 
 class BaseSol:
     'define the basic solution of a MOBIP'
-    solver = None
-    
-    moipProblem = None 
-    
-    cplexSolutionSet = [] 
-    
-    cplexResultMap= {}
-    
-    lb=[] 
-    
-    ub=[]
-    
-    types=[]
-    
-    xvar=[]
-    
-    constrIndexList =[]
     
     def __init__(self, moipProblem):
+        #instance variable: the solver instance
+        self.solver = None
+        #instance variable: the problem instance 
+        self.moipProblem = None 
+        #instance variable: the solution set found by solver 
+        self.cplexSolutionSet = [] 
+        #instance variable: the solution map, the key is the solution obj values, the value is the solution 
+        self.cplexResultMap= {}
+        #instance variable: the list of the lower bounds of variables 
+        self.lb=[] 
+        #instance variable: the list of the upper bounds of variables
+        self.ub=[]
+        #instance variable: the list of types of variables 
+        self.types=[]
+        #instance variable: the variable values of the solution found by the solver 
+        self.xvar=[]
+        #instance variable: the index lists of the constraints of the inequation and equation 
+        self.constrIndexList =[]
         self.moipProblem = moipProblem
         
     def execute(self):
+        print("%s" % ("Starting solving the problem with BaseSol execution!"))
         self.solver.solve()
         #debugging purpose
         #print ("Solution value  = ", self.solver.solution.get_objective_value())
@@ -41,17 +43,19 @@ class BaseSol:
         #xsol = self.solver.solution.get_values()
         #debugging purpose
         #print ('xsol = ',  xsol )
-        #if(self.solver.solution.get_status_string()!='optimal'):
-        #    return
+        if(self.solver.solution.get_status_string().find("optimal")==-1):
+            return
         cplexResults = CplexSolResult(self.solver.solution,self.moipProblem)
-        self.cplexSolutionSet.append(cplexResults)
-        self.cplexResultMap[cplexResults.getResultID()] = cplexResults
+        self.addTocplexSolutionSetMap(cplexResults)
     
     """
     model the problem as a single objective problem, and preparation solver for this
     """
     def prepare(self):
         self.solver = cplex.Cplex()
+        self.solver.set_results_stream(None)
+        self.solver.set_warning_stream(None)
+        self.solver.set_error_stream(None)
         self.solver.objective.set_sense(self.solver.objective.sense.minimize)
         self.ub = [1]*self.moipProblem.featureCount
         self.lb = [0]*self.moipProblem.featureCount
@@ -109,7 +113,12 @@ class BaseSol:
         #print (self.constrIndexList)
         #for debugging purpose
         #self.__private_testConstraints__()
-        
+    
+    def addTocplexSolutionSetMap(self,cplexResults):
+        if(cplexResults.getResultID() in self.cplexResultMap.keys()): 
+            return
+        self.cplexSolutionSet.append(cplexResults)
+        self.cplexResultMap[cplexResults.getResultID()] = cplexResults    
         
     def displayVariableLowerBound(self):
         print ("Variable Loweer Bounds: %s" % self.lb) 
@@ -130,20 +139,19 @@ class BaseSol:
         print ("Total Solution Set Size: %s" % len(self.cplexSolutionSet)) 
         
     def displayCplexResultMap(self):
-        print ("Cplex Results Map: %s" % self.cplexResultMap) 
+        print ("Cplex Results Map: %s" % self.cplexResultMap.keys()) 
         
     def __private_testConstraints__(self):
         for i in range(self.solver.linear_constraints.get_num()):
             print (self.solver.linear_constraints.get_rows(i), self.solver.linear_constraints.get_senses(i), self.solver.linear_constraints.get_rhs(i))
 
 class CplexSolResult:
-    'define the basic solution of a MOBIP'
-    xvar = []
-    objs = []
-    solveStatus = ""
-    ResultID = ""
-    
+    'define the basic solution of a MOBIP'   
     def __init__(self, solverSolution, moipProblem):
+        self.xvar = []
+        self.objs = []
+        self.solveStatus = ""
+        self.ResultID = ""
         self.xvar = solverSolution.get_values()
         objMatrix = moipProblem.attributeMatrix
         self.objs = self.getAllObjs(solverSolution,objMatrix)
@@ -174,7 +182,7 @@ if __name__ == "__main__":
     prob = MOIPProblem(4,43,3)  
     prob.displayObjectiveCount()
     prob.displayFeatureCount()
-    prob.exetractFromFile("parameter.txt")
+    prob.exetractFromFile("../test/parameter_wp.txt")
     prob.displayObjectives()
     prob.displayVariableNames()
     prob.displayObjectiveSparseMapList()
