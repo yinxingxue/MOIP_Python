@@ -5,6 +5,7 @@ Created on Thu Jun 14 16:46:37 2018
 @author: Yinxing Xue
 """
 import moipSol 
+import mooUtility
 import math
 
 class NaiveSol(BaseSol):  
@@ -15,6 +16,7 @@ class NaiveSol(BaseSol):
         self.solveCounter = 0
         self.objConstrIndexList = []
         self.boundsDict = {}
+        self.cplexParetoSet= {}
        
     #覆写父类的方法  
     def execute(self):  
@@ -66,7 +68,12 @@ class NaiveSol(BaseSol):
         print ("After the epsilon constraint, the adjusted UBs of the objective 2 to k: ", self.getSolverObjConstraintUBs())
         #debugging purpose
         #print (self.solveCounter)
-    
+        inputPoints = [list(map(float,resultID.split('_'))) for resultID in self.cplexResultMap.keys()]
+        #debugging purpose
+        #print (inputPoints)
+        paretoPoints, dominatedPoints = MOOUtility.simple_cull(inputPoints,MOOUtility.dominates)
+        #print ("Pareto size: ", len(paretoPoints), " Pareto front: ",  paretoPoints)
+        self.cplexParetoSet= paretoPoints
     """
     level:
     passDict: the dictionary to travese, the key is the k-th objective, the value is the adjusted UB
@@ -129,6 +136,9 @@ class NaiveSol(BaseSol):
     def displayObjsBoundsDictionary(self):
         print ("Objectives' Bound Dictionary: %s" % self.boundsDict) 
         
+    def displayCplexParetoSet(self):
+        print ("Total Pareto size: ", len(self.cplexParetoSet))
+        print ("Cplex Pareto front: ",  self.cplexParetoSet) 
     
 if __name__ == "__main__":
     prob = MOIPProblem(4,12,3)  
@@ -149,6 +159,7 @@ if __name__ == "__main__":
     sol.displayObjsBoundsDictionary()
     sol.displayCplexSolutionSetSize()
     sol.displayCplexResultMap()
+    sol.displayCplexParetoSet()
     sol.displayVariableLowerBound()
     sol.displayVariableUpperBound()
     sol.displayVariableTypes()
