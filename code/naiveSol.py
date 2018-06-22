@@ -16,7 +16,6 @@ class NaiveSol(BaseSol):
         self.solveCounter = 0
         self.objConstrIndexList = []
         self.boundsDict = {}
-        self.cplexParetoSet= {}
        
     #覆写父类的方法  
     def execute(self):  
@@ -74,6 +73,8 @@ class NaiveSol(BaseSol):
         paretoPoints, dominatedPoints = MOOUtility.simple_cull(inputPoints,MOOUtility.dominates)
         #print ("Pareto size: ", len(paretoPoints), " Pareto front: ",  paretoPoints)
         self.cplexParetoSet= paretoPoints
+        
+        
     """
     level:
     passDict: the dictionary to travese, the key is the k-th objective, the value is the adjusted UB
@@ -135,16 +136,12 @@ class NaiveSol(BaseSol):
       
     def displayObjsBoundsDictionary(self):
         print ("Objectives' Bound Dictionary: %s" % self.boundsDict) 
-        
-    def displayCplexParetoSet(self):
-        print ("Total Pareto size: ", len(self.cplexParetoSet))
-        print ("Cplex Pareto front: ",  self.cplexParetoSet) 
     
 if __name__ == "__main__":
-    prob = MOIPProblem(4,12,3)  
+    prob = MOIPProblem(4,43,3)  
     prob.displayObjectiveCount()
     prob.displayFeatureCount()
-    prob.exetractFromFile("../test/parameter_js.txt")
+    prob.exetractFromFile("../test/parameter_wp1.txt")
     prob.displayObjectives()
     prob.displayVariableNames()
     prob.displayObjectiveSparseMapList()
@@ -155,6 +152,7 @@ if __name__ == "__main__":
     sol= NaiveSol(prob)
     sol.prepare()
     sol.execute()
+    sol.outputCplexParetoMap("../result/Pareto_wp1.txt")
     sol.displaySolvingAttempts()
     sol.displayObjsBoundsDictionary()
     sol.displayCplexSolutionSetSize()

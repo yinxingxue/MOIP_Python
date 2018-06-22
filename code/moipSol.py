@@ -22,6 +22,8 @@ class BaseSol:
         self.cplexSolutionSet = [] 
         #instance variable: the solution map, the key is the solution obj values, the value is the solution 
         self.cplexResultMap= {}
+        #instance variable: the map of the solutions in the pareto front  
+        self.cplexParetoSet= {}
         #instance variable: the list of the lower bounds of variables 
         self.lb=[] 
         #instance variable: the list of the upper bounds of variables
@@ -33,6 +35,7 @@ class BaseSol:
         #instance variable: the index lists of the constraints of the inequation and equation 
         self.constrIndexList =[]
         self.moipProblem = moipProblem
+        
         
     def execute(self):
         print("%s" % ("Starting solving the problem with BaseSol execution!"))
@@ -47,6 +50,13 @@ class BaseSol:
             return
         cplexResults = CplexSolResult(self.solver.solution,self.moipProblem)
         self.addTocplexSolutionSetMap(cplexResults)
+        
+        inputPoints = [list(map(float,resultID.split('_'))) for resultID in self.cplexResultMap.keys()]
+        #debugging purpose
+        #print (inputPoints)
+        paretoPoints, dominatedPoints = MOOUtility.simple_cull(inputPoints,MOOUtility.dominates)
+        #print ("Pareto size: ", len(paretoPoints), " Pareto front: ",  paretoPoints)
+        self.cplexParetoSet= paretoPoints
     
     """
     model the problem as a single objective problem, and preparation solver for this
@@ -141,6 +151,15 @@ class BaseSol:
     def displayCplexResultMap(self):
         print ("Cplex Results Map: %s" % self.cplexResultMap.keys()) 
         
+    def displayCplexParetoSet(self):
+        print ("Total Pareto size: ", len(self.cplexParetoSet))
+        print ("Cplex Pareto front: ",  self.cplexParetoSet) 
+        
+    def outputCplexParetoMap(self,file):
+        file = open(file,"w") 
+        file.write(';'.join(list(map(str,self.cplexParetoSet)))) 
+        file.close() 
+        
     def __private_testConstraints__(self):
         for i in range(self.solver.linear_constraints.get_num()):
             print (self.solver.linear_constraints.get_rows(i), self.solver.linear_constraints.get_senses(i), self.solver.linear_constraints.get_rhs(i))
@@ -182,7 +201,7 @@ if __name__ == "__main__":
     prob = MOIPProblem(4,43,3)  
     prob.displayObjectiveCount()
     prob.displayFeatureCount()
-    prob.exetractFromFile("../test/parameter_wp.txt")
+    prob.exetractFromFile("../test/parameter_wp1.txt")
     prob.displayObjectives()
     prob.displayVariableNames()
     prob.displayObjectiveSparseMapList()
@@ -193,6 +212,7 @@ if __name__ == "__main__":
     sol= BaseSol(prob)
     sol.prepare()
     sol.execute()
+    sol.outputCplexParetoMap("../result/Pareto.txt")
     sol.displayCplexSolutionSetSize()
     sol.displayCplexResultMap()
     sol.displayVariableLowerBound()

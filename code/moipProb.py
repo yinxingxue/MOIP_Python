@@ -215,7 +215,7 @@ if __name__ == "__main__":
     prob = MOIPProblem(4,43,3)  
     prob.displayObjectiveCount()
     prob.displayFeatureCount()
-    prob.exetractFromFile("../test/parameter_wp.txt")
+    prob.exetractFromFile("../test/parameter_wp1.txt")
     prob.displayObjectives()
     prob.displayVariableNames()
     prob.displayObjectiveSparseMapList()
