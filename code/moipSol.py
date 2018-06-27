@@ -4,7 +4,8 @@ Created on Thu Jun 14 16:49:14 2018
 
 @author: Yinxing Xue
 """
-import moipProb
+from moipProb import MOIPProblem 
+from mooUtility import MOOUtility 
 import numpy as np
 import cplex
 from cplex import Cplex
@@ -12,6 +13,8 @@ from cplex.exceptions import CplexError
 
 class BaseSol:
     'define the basic solution of a MOBIP'
+    TimeOut = 100
+    DeterTimeOut = 100
     
     def __init__(self, moipProblem):
         #instance variable: the solver instance
@@ -48,7 +51,7 @@ class BaseSol:
         #print ('xsol = ',  xsol )
         if(self.solver.solution.get_status_string().find("optimal")==-1):
             return
-        cplexResults = CplexSolResult(self.solver.solution,self.moipProblem)
+        cplexResults = CplexSolResult(self.solver.solution.get_values(),self.solver.solution.get_status_string(),self.moipProblem)
         self.addTocplexSolutionSetMap(cplexResults)
         
         inputPoints = [list(map(float,resultID.split('_'))) for resultID in self.cplexResultMap.keys()]
@@ -66,6 +69,8 @@ class BaseSol:
         self.solver.set_results_stream(None)
         self.solver.set_warning_stream(None)
         self.solver.set_error_stream(None)
+        self.solver.parameters.timelimit.set(BaseSol.TimeOut)
+        self.solver.parameters.dettimelimit.set(BaseSol.DeterTimeOut)
         self.solver.objective.set_sense(self.solver.objective.sense.minimize)
         self.ub = [1]*self.moipProblem.featureCount
         self.lb = [0]*self.moipProblem.featureCount
@@ -74,6 +79,7 @@ class BaseSol:
         firstObj=self.moipProblem.attributeMatrix[0]
         #add the objective and variables to the solver
         self.solver.variables.add(obj = firstObj, lb = self.lb, ub = self.ub, types = self.types, names = self.xvar )
+        self.solver.objective.set_name("ori_Obj")
         variableCount = self.moipProblem.featureCount
         constCounter =0 
         self.constrIndexList =[]
@@ -128,7 +134,8 @@ class BaseSol:
         if(cplexResults.getResultID() in self.cplexResultMap.keys()): 
             return
         self.cplexSolutionSet.append(cplexResults)
-        self.cplexResultMap[cplexResults.getResultID()] = cplexResults    
+        self.cplexResultMap[cplexResults.getResultID()] = cplexResults 
+        print ("BestObj: %f 1stObj: %f" % (cplexResults.getThisObj(), cplexResults.getKthObj(0))) 
         
     def displayVariableLowerBound(self):
         print ("Variable Loweer Bounds: %s" % self.lb) 
@@ -166,15 +173,33 @@ class BaseSol:
 
 class CplexSolResult:
     'define the basic solution of a MOBIP'   
-    def __init__(self, solverSolution, moipProblem):
+#    def __init__(self, solverSolution, moipProblem):
+#        self.xvar = []
+#        self.objs = []
+#        self.solveStatus = ""
+#        self.ResultID = ""
+#        self.xvar = solverSolution.get_values()
+#        objMatrix = moipProblem.attributeMatrix
+#        self.objs = self.getAllObjs(self.xvar,objMatrix)
+#        self.thisObj = solverSolution.get_objective_value()
+#        self.solveStatus = solverSolution.get_status_string()
+#        for i in range(0,len(self.objs)):
+#            value = self.objs[i]
+#            valueString = "%.2f" % value
+#            self.ResultID += valueString
+#            if i != len(self.objs) -1:
+#                self.ResultID += '_'
+    
+    def __init__(self,rsltXvar,rsltSolString, moipProblem):
         self.xvar = []
         self.objs = []
         self.solveStatus = ""
         self.ResultID = ""
-        self.xvar = solverSolution.get_values()
+        self.xvar = rsltXvar
         objMatrix = moipProblem.attributeMatrix
-        self.objs = self.getAllObjs(solverSolution,objMatrix)
-        self.solveStatus = solverSolution.get_status_string()
+        self.objs = self.getAllObjs(self.xvar,objMatrix)
+        self.thisObj = self.objs[0]
+        self.solveStatus = rsltSolString
         for i in range(0,len(self.objs)):
             value = self.objs[i]
             valueString = "%.2f" % value
@@ -182,11 +207,11 @@ class CplexSolResult:
             if i != len(self.objs) -1:
                 self.ResultID += '_'
     
-    def getAllObjs(self,solverSolution,objMatrix):
+    def getAllObjs(self,xval,objMatrix):
         # dimension: k* variableCount
         matA = np.array(objMatrix)
         twoDArray= []
-        twoDArray.append(solverSolution.get_values())
+        twoDArray.append(xval)
         # dimension: variableCount * 1
         matB = np.array(twoDArray).transpose()
         allObjs= np.dot(matA, matB)
@@ -196,6 +221,17 @@ class CplexSolResult:
     
     def getResultID(self):
         return self.ResultID
+    
+    def getThisObj(self):
+        return self.thisObj
+    
+    def getKthObj(self,k):
+        if k >= len(self.objs) :
+            return None
+        elif k< len(self.objs) or k> -len(self.objs): 
+            return self.objs[k]
+        else: 
+            return None
     
 if __name__ == "__main__":
     prob = MOIPProblem(4,43,3)  

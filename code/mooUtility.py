@@ -4,6 +4,9 @@ Created on Wed Jun 20 00:48:48 2018
 
 @author: allen
 """
+
+import math
+
 class MOOUtility():
     @classmethod
     def simple_cull(cls, inputPoints, dominates): #类方法
@@ -38,3 +41,19 @@ class MOOUtility():
     
     def dominates(row, candidateRow):
         return sum([row[x] >= candidateRow[x] for x in range(len(row))]) == len(row)   
+    
+    @classmethod
+    def round(cls, value):
+        return math.floor(float(value)+0.5)
+    
+    @classmethod
+    def arrayEqual(cls,dict1,array1):
+        for i in range(0,len(array1)):
+            if(i not in dict1) and (array1[i]==0):
+                continue
+            elif dict1[i] == array1[i]:
+                continue
+            else:
+                return False
+        return True
+                

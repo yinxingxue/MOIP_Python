@@ -4,8 +4,10 @@ Created on Thu Jun 14 16:46:37 2018
 
 @author: Yinxing Xue
 """
-import moipSol 
-import mooUtility
+from moipProb import MOIPProblem 
+from moipSol import BaseSol
+from moipSol import CplexSolResult
+from mooUtility import MOOUtility 
 import math
 
 class NaiveSol(BaseSol):  
@@ -99,7 +101,7 @@ class NaiveSol(BaseSol):
                 #print ('xsol = ',  xsol )
                 if(self.solver.solution.get_status_string().find("optimal")==-1):
                     continue
-                cplexResults = CplexSolResult(self.solver.solution,self.moipProblem)
+                cplexResults = CplexSolResult(self.solver.solution.get_values(),self.solver.solution.get_status_string(),self.moipProblem)
                 self.addTocplexSolutionSetMap(cplexResults)
         else: 
             (ub,lb)=  self.boundsDict[level]
