@@ -14,7 +14,7 @@ from mooUtility import MOOUtility
 from decimal import Decimal
 
 class CwmoipSol(NaiveSol):  
-    'define the epsilon-constraint solution of a MOBIP'
+    'define the CWMOIP solution of a MOBIP'
     def __init__(self, moipProblem):  
         #override parent initializer  
         NaiveSol.__init__(self,moipProblem)  
@@ -212,7 +212,7 @@ if __name__ == "__main__":
     prob = MOIPProblem(4,43,3)  
     prob.displayObjectiveCount()
     prob.displayFeatureCount()
-    prob.exetractFromFile("../test/parameter_wp1.txt")
+    prob.exetractFromFile("../test/parameter_wp4.txt")
     prob.displayObjectives()
     prob.displayVariableNames()
     prob.displayObjectiveSparseMapList()
@@ -223,7 +223,7 @@ if __name__ == "__main__":
     sol= CwmoipSol(prob)
     sol.prepare()
     sol.execute()
-    sol.outputCplexParetoMap("../result/Pareto_wp1.txt")
+    sol.outputCplexParetoMap("../result/Pareto_wp4.txt")
     sol.displaySolvingAttempts()
     sol.displayObjsBoundsDictionary()
     sol.displayCplexSolutionSetSize()
