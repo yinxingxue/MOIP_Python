@@ -16,8 +16,8 @@ class UtopiaPlane():
         #input
         self.cplex = None
         self.attributeMatrix_in  = [[]]
-        self.sparseInequationsMapList = [] 
-        self.sparseEquationsMapList = []
+        self.extraInequationsMapList = [] 
+        self.extraEquationsMapList = []
         #output
         self.x_up = [[]]
         self.y_up = [[]]
@@ -30,8 +30,8 @@ class UtopiaPlane():
         self.cplex = cplex
         self.moipProblem = moipProblem
         self.attributeMatrix_in= moipProblem.attributeMatrix
-        self.sparseInequationsMapList = moipProblem.sparseInequationsMapList
-        self.sparseEquationsMapList = moipProblem.sparseEquationsMapList
+        self.extraInequationsMapList = []
+        self.extraEquationsMapList = []
         self.x_up = np.empty([len(self.attributeMatrix_in),len(self.attributeMatrix_in[0])])
         self.y_up = np.empty([len(self.attributeMatrix_in),len(self.attributeMatrix_in)])
         self.y_ub = np.empty(len(self.attributeMatrix_in))
@@ -42,34 +42,39 @@ class UtopiaPlane():
         utopiaSols = {}
         for i in range(0,len(self.attributeMatrix_in)):
             target = np.array(self.attributeMatrix_in[i])
-            solutions = UtopiaPlane.intlinprog(self.cplex, self.xVar, target, self.sparseInequationsMapList, self.sparseEquationsMapList, None, None)
+            solutions = UtopiaPlane.intlinprog(self.cplex, self.xVar, target, self.extraInequationsMapList, self.extraEquationsMapList, None, None)
             solution = solutions[0]
+            optSolution = None
             cplexResult = CplexSolResult(solution[1],"optimal",self.moipProblem)
-            if cplexResult.getResultID() not in utopiaSols:
-                utopiaSols[cplexResult.getResultID()] = cplexResult
-            elif cplexResult.getResultID() in utopiaSols and len(solutions)>1:
-                for j in (1,len(solutions)):
-                    solution2 = solutions[j]
-                    cplexResult2 = CplexSolResult(solution2[1],"optimal",self.moipProblem)
-                    if cplexResult2.getResultID() not in utopiaSols:
-                        utopiaSols[cplexResult2.getResultID()] = cplexResult2
-                        break
+            if cplexResult.getResultID() not in utopiaSols or len(solutions)==1:
+                optSolution = cplexResult
+                utopiaSols[optSolution.getResultID()] = optSolution
+            elif cplexResult.getResultID() in utopiaSols and len(solutions)>1:            
+                best = float("+inf")
+                for j in range(1,len(solutions)):
+                    solution = solutions[j]
+                    cplexResult2 = CplexSolResult(solution[1],"optimal",self.moipProblem)
+                    if cplexResult2.getResultID() not in utopiaSols and cplexResult2.getThisObj() < best:
+                        best = cplexResult2.getThisObj() 
+                        optSolution = cplexResult2
                     #end of if
                 #end of for
+                utopiaSols[optSolution.getResultID()] = optSolution
             #end of if-elif
-            X = np.array(cplexResult.xvar)
+            X = np.array(optSolution.xvar)
             self.x_up[i] = X
-            self.y_up[i] = UtopiaPlane.calculateObjs(cplexResult.xvar,self.attributeMatrix_in)
-            y1 = solution[0]
+            self.y_up[i] = UtopiaPlane.calculateObjs(optSolution.xvar,self.attributeMatrix_in)
+            y1 = optSolution.getKthObj(i)
             self.y_lb[i] = y1
             
             negTarget = target * (-1.0)
-            negSolutions = UtopiaPlane.intlinprog(self.cplex, self.xVar, negTarget, self.sparseInequationsMapList, self.sparseEquationsMapList, None, None)
+            negSolutions = UtopiaPlane.intlinprog(self.cplex, self.xVar, negTarget, self.extraInequationsMapList, self.extraEquationsMapList, None, None)
             negSolution = negSolutions[0]
             X2 = negSolution[1]
             y2 = negSolution[0]* (-1.0)
             self.y_ub[i] = y2;
         #end of for
+        return
     
     @classmethod
     def calculateObjs(cls,xval,objMatrix):
@@ -177,3 +182,88 @@ class UtopiaPlane():
         
         cplex.linear_constraints.delete(tempConstrList)
         return solutions
+
+class SolRep():
+    'define the calculation and implementation of Representative Solutions'
+    def __init__(self, y_up, varNo, n):
+        #input
+        self.attributeMatrix_in  = [[]]
+        self.y_up = y_up
+        #represent the coefficient of the original inequation constraints
+        self.origi_A = [] 
+        #represent the right side value of the original inequation constraints
+        self.origi_B = []
+        #represent the coefficient of the original equation constraints
+        self.origi_Aeq = [] 
+        #represent the right side value of the original equation constraints
+        self.origi_Beq = []
+        #represent the coefficient of the extra inequation constraints
+        self.extra_A = [] 
+        #represent the right side value of the extra inequation constraints
+        self.extra_B = []
+        #represent the coefficient of the extra equation constraints
+        self.extra_Aeq = [] 
+         #represent the right side value of the extra equation constraints
+        self.extra_Beq = []
+        self.varNo = varNo
+        self.n = n
+        #output
+        self.P = [[]]
+        self.xVar = []
+        
+    def calculate(self):
+        No = len(self.y_up)
+        Nv = self.varNo
+        #generate the constant matrix V
+        ConstantMatrix.initialize(self.y_up, No)
+        V = ConstantMatrix.V
+        #generate constant upper bounds and lower bounds
+        ub = [1]*(Nv+No+1)
+        ub[Nv:] = float("+inf")
+        lb = [0]*(Nv+No+1)
+        lb[Nv:] = float("-inf")
+        
+        self.extra_A = self.origi_A.copy()
+        self.extra_B = self.origi_B.copy()
+        self.extra_Aeq = self.origi_Aeq.copy()
+        self.extra_Beq = self.origi_Beq.copy()
+        negEye = np.eye(No,dtype= float) * (-1)
+        zeroMat = np.zeros((No,1))
+        zeroRightSide = np.zeros((No,1))
+        extraEquationsMat= np.column_stack(self.attributeMatrix_in,negEye,zeroMat)
+        SolRep.appendToSparseMapList(self.extra_Aeq,extraEquationsMat)
+        SolRep.appendToSparseMapList(self.extra_Beq,zeroRightSide)
+        cplex = SolRep.initializeCplex(Nv, No, self.extra_A, self.extra_B, self.extra_Aeq, self.extra_Beq, lb, ub) 
+        
+    def setParas(self, attributeMatrix, origi_A , origi_B, origi_Aeq, origi_Beq):
+        self.attributeMatrix_in = attributeMatrix
+        #need to clone
+        self.origi_A = origi_A
+        self.origi_B = origi_B
+        self.origi_Aeq = origi_Aeq
+        self.origi_Beq = origi_Beq
+  
+    @classmethod  
+    def appendToSparseMapList(cls, mapList, matrix):
+        
+        return        
+    
+    @classmethod    
+    def initializeCplex(cls, Nv, No, extraInequationsMapList, extraEquationsMapList, lb, ub):
+        cplex = None
+        return cplex
+
+class ConstantMatrix():
+    'define the calculation and implementation of Constant Matrix'
+    V = None
+    
+    @classmethod
+    def initialize(cls, y_up, No):
+        V = np.zeros((No-1, No))
+        for i in range(0,No-1):
+            v_i = y_up[len(y_up)-1] - y_up[i]
+            norm_2 = np.linalg.norm(v_i,ord=2,keepdims=True)
+            if norm_2 != 0 :
+                v_i = v_i  / norm_2
+            V[i] = v_i
+    
