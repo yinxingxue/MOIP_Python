@@ -52,6 +52,17 @@ class UtopiaPlane():
             elif cplexResult.getResultID() in utopiaSols and len(solutions)>1:            
                 best = float("+inf")
                 for j in range(1,len(solutions)):
+                    """
+                    debug purpose
+                    """
+                    if i == 2 and j == 2:
+                        solution = solutions[j]
+                        cplexResult2 = CplexSolResult(solution[1],"optimal",self.moipProblem)
+                        optSolution = cplexResult2
+                        break
+                    """
+                    end of debugging purpose
+                    """
                     solution = solutions[j]
                     cplexResult2 = CplexSolResult(solution[1],"optimal",self.moipProblem)
                     if cplexResult2.getResultID() not in utopiaSols and cplexResult2.getThisObj() < best:
@@ -219,9 +230,9 @@ class SolRep():
         V = ConstantMatrix.V
         #generate constant upper bounds and lower bounds
         ub = [1]*(Nv+No+1)
-        ub[Nv:] = float("+inf")
+        ub[Nv:] = [float("inf")] * (len(ub) - Nv) 
         lb = [0]*(Nv+No+1)
-        lb[Nv:] = float("-inf")
+        lb[Nv:] = [float("-inf")] * (len(lb) - Nv)
         
         self.extra_A = self.origi_A.copy()
         self.extra_B = self.origi_B.copy()
@@ -230,9 +241,9 @@ class SolRep():
         negEye = np.eye(No,dtype= float) * (-1)
         zeroMat = np.zeros((No,1))
         zeroRightSide = np.zeros((No,1))
-        extraEquationsMat= np.column_stack(self.attributeMatrix_in,negEye,zeroMat)
+        extraEquationsMat= np.column_stack((self.attributeMatrix_in,negEye,zeroMat))
         SolRep.appendToSparseMapList(self.extra_Aeq,extraEquationsMat)
-        SolRep.appendToSparseMapList(self.extra_Beq,zeroRightSide)
+        SolRep.appendToSparseList(self.extra_Beq,zeroRightSide)
         cplex = SolRep.initializeCplex(Nv, No, self.extra_A, self.extra_B, self.extra_Aeq, self.extra_Beq, lb, ub) 
         
     def setParas(self, attributeMatrix, origi_A , origi_B, origi_Aeq, origi_Beq):
@@ -245,7 +256,20 @@ class SolRep():
   
     @classmethod  
     def appendToSparseMapList(cls, mapList, matrix):
-        
+        for i in range(0, len(matrix)):
+            equationArray = matrix[i]
+            equationDict = {}
+            for j in range(0,len(equationArray)):
+                if equationArray[j]!=0:  
+                    equationDict[j] = float(equationArray[j])
+            mapList.append(equationDict)
+        return 
+       
+    @classmethod  
+    def appendToSparseList(cls, mapList, matArray):
+        for i in range(0, len(matArray)):
+            equation = matArray[i]
+            mapList.append(equation[0])
         return        
     
     @classmethod    
@@ -259,11 +283,11 @@ class ConstantMatrix():
     
     @classmethod
     def initialize(cls, y_up, No):
-        V = np.zeros((No-1, No))
+        ConstantMatrix.V = np.zeros((No-1, No))
         for i in range(0,No-1):
             v_i = y_up[len(y_up)-1] - y_up[i]
             norm_2 = np.linalg.norm(v_i,ord=2,keepdims=True)
             if norm_2 != 0 :
                 v_i = v_i  / norm_2
-            V[i] = v_i
+            ConstantMatrix.V[i] = v_i
     

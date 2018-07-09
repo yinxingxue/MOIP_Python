@@ -50,7 +50,7 @@ class NcgopSol(CwmoipSol):
             right = inequal[self.varNv]
             del inequal[self.varNv]
             #for testing purpose
-            print (inequal,moipProblem.sparseInequationsMapList[i])
+            #print (inequal,moipProblem.sparseInequationsMapList[i])
             self.origi_A.append(inequal)
             self.origi_B.append(right)
         for i in range(0, len(moipProblem.sparseEquationsMapList)):
@@ -58,7 +58,7 @@ class NcgopSol(CwmoipSol):
             right = equal[self.varNv]
             del equal[self.varNv]
             #for testing purpose
-            print (equal,moipProblem.sparseEquationsMapList[i])
+            #print (equal,moipProblem.sparseEquationsMapList[i])
             self.origi_Aeq.append(equal)
             self.origi_Beq.append(right)
         assert len(self.origi_A)== len(self.origi_B)     
@@ -74,7 +74,8 @@ class NcgopSol(CwmoipSol):
         self.utopiaPlane.calculate();
         print("utopiaPlane done.");
         self.pGenerator= SolRep(self.utopiaPlane.y_up, self.varNv, self.objNo)
-        self.pGenerator.setParas(self.moipProblem.attributeMatrix, self.origi_A , self.origi_B, self.origi_Aeq, self.origi_Beq)
+        objMatrix = np.array(self.moipProblem.attributeMatrix)
+        self.pGenerator.setParas(objMatrix, self.origi_A , self.origi_B, self.origi_Aeq, self.origi_Beq)
         self.pGenerator.calculate()
 
 if __name__ == "__main__":
