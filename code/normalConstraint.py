@@ -6,6 +6,11 @@ Created on Sat Jun 30 13:44:12 2018
 """
 import numpy as np
 from moipSol import CplexSolResult
+from moipSol import BaseSol 
+import cplex
+from cplex import Cplex
+from cplex.exceptions import CplexError
+
 
 class UtopiaPlane():
     
@@ -196,6 +201,10 @@ class UtopiaPlane():
 
 class SolRep():
     'define the calculation and implementation of Representative Solutions'
+    WorkMem = 2000
+    DeterTimeOut = 10000
+    XvarNames = None
+    
     def __init__(self, y_up, varNo, n):
         #input
         self.attributeMatrix_in  = [[]]
@@ -273,9 +282,22 @@ class SolRep():
         return        
     
     @classmethod    
-    def initializeCplex(cls, Nv, No, extraInequationsMapList, extraEquationsMapList, lb, ub):
-        cplex = None
-        return cplex
+    def initializeCplex(cls, Nv, No, a_in , b_in , aeq_in, beq_in, lbs, ubs):
+        solver = cplex.Cplex()
+        solver.set_results_stream(None)
+        solver.set_warning_stream(None)
+        solver.set_error_stream(None)
+        if Nv < 2000:
+            solver.parameters.timelimit.set(BaseSol.TimeOut)
+            solver.parameters.dettimelimit.set(BaseSol.DeterTimeOut)
+        else: 
+            solver.parameters.workmem.set(SolRep.WorkMem)
+            solver.parameters.dettimelimit.set(SolRep.DeterTimeOut)
+        var_names = ['x_'+str(i) for i in range(0,Nv+No+1) ]
+        SolRep.XvarNames = var_names
+        var_types = 'C'* (Nv+No+1)
+        solver.variables.add(lb = lbs, ub = ubs, types = var_types, names = var_names)    
+        return solver
 
 class ConstantMatrix():
     'define the calculation and implementation of Constant Matrix'
