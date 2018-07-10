@@ -255,6 +255,38 @@ class SolRep():
         SolRep.appendToSparseList(self.extra_Beq,zeroRightSide)
         cplex = SolRep.initializeCplex(Nv, No, self.extra_A, self.extra_B, self.extra_Aeq, self.extra_Beq, lb, ub) 
         
+        #do the initialization of X0
+        ini = np.random.randint(0,1000,size=[1,No])
+        ini = ini / np.sum(ini)
+        #debugging purpose
+        ini = [0.31501993797075767, 0.15640230394328755, 0.128046078865751, 0.40053167922020383]
+        X0 = np.dot(ini,self.y_up)
+        p = X0 
+        self.P.append(p)
+        
+        for i in range(0,self.n):
+              mult = np.random.rand(1,No-1)
+              mult = mult[0]
+              #debugging purpose
+              mult = [0.14187423949758182, 0.6855104039583568, 0.5576721483410823]
+              mult = mult / np.linalg.norm (mult,2)
+              D = np.dot(mult,V)
+              
+              #Finding the limit of lambda
+              lambda_l = 0.0;
+              lambda_u = 0.0;
+           
+              tempAeq2_mat = np.column_stack((np.zeros((No,Nv)), np.eye(No,dtype= float), (-1*D).transpose()))
+              tempAeq2 = []
+              SolRep.appendToSparseMapList(tempAeq2,tempAeq2_mat)
+              Beq2 = X0
+              tempBeq2 = []
+              tempBeq2 = Beq2.tolist().copy()
+              ff = np.zeros((1, Nv+No+1)) 
+              ff = ff[0]
+              ff[Nv+No] = 1.0
+        return 
+        
     def setParas(self, attributeMatrix, origi_A , origi_B, origi_Aeq, origi_Beq):
         self.attributeMatrix_in = attributeMatrix
         #need to clone
@@ -297,6 +329,40 @@ class SolRep():
         SolRep.XvarNames = var_names
         var_types = 'C'* (Nv+No+1)
         solver.variables.add(lb = lbs, ub = ubs, types = var_types, names = var_names)    
+        
+        inEquationRows = []
+        for i in range(0,len(a_in)):
+            ineqlDic= a_in[i]
+            variables = []
+            coefficient = []
+            for key in ineqlDic: 
+                variables.append('x_'+str(key))
+                coefficient.append(ineqlDic[key])
+            row=[]
+            row.append(variables)
+            row.append(coefficient)
+            inEquationRows.append(row)       
+        indices = solver.linear_constraints.add(lin_expr = inEquationRows, senses = 'L'*len(a_in), rhs =  b_in)
+        #testing purpose
+        #print (indices)
+      
+        equationRows = []
+        for i in range(0,len(aeq_in)):
+            eqlDic= aeq_in[i]
+            variables = []
+            coefficient = []
+            for key in eqlDic: 
+                variables.append('x_'+str(key))
+                coefficient.append(eqlDic[key])
+            row=[]
+            row.append(variables)
+            row.append(coefficient)
+            equationRows.append(row)       
+        indices = solver.linear_constraints.add(lin_expr = equationRows, senses = 'E'*len(aeq_in), rhs =  beq_in)
+        #testing purpose
+        #print (indices)
+        #verify the number of total constraints
+        assert indices[-1]+1 == len(b_in)+ len(beq_in) 
         return solver
 
 class ConstantMatrix():

@@ -73,7 +73,7 @@ class NcgopSol(CwmoipSol):
         self.utopiaPlane = UtopiaPlane(self.moipProblem,self.solver);
         self.utopiaPlane.calculate();
         print("utopiaPlane done.");
-        self.pGenerator= SolRep(self.utopiaPlane.y_up, self.varNv, self.objNo)
+        self.pGenerator= SolRep(self.utopiaPlane.y_up, self.varNv, 1000)
         objMatrix = np.array(self.moipProblem.attributeMatrix)
         self.pGenerator.setParas(objMatrix, self.origi_A , self.origi_B, self.origi_Aeq, self.origi_Beq)
         self.pGenerator.calculate()
