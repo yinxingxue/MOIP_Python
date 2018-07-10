@@ -76,7 +76,25 @@ class NcgopSol(CwmoipSol):
         self.pGenerator= SolRep(self.utopiaPlane.y_up, self.varNv, 1000)
         objMatrix = np.array(self.moipProblem.attributeMatrix)
         self.pGenerator.setParas(objMatrix, self.origi_A , self.origi_B, self.origi_Aeq, self.origi_Beq)
-        self.pGenerator.calculate()
+        points = self.pGenerator.calculate()
+        print("pGenerator done.")
+        
+        #for utopiaPlane calculation, to assure the completeness of resolving, we cannot set timeout for this.cplex. 
+		 #then for NCPDG, we can give the timeout for intlinprog timeout for each execution 
+		 #for non-Linux projects
+        if self.varNv < 2000:
+            self.solver.parameters.timelimit.set(BaseSol.TimeOut)
+            self.solver.parameters.dettimelimit.set(BaseSol.DeterTimeOut)
+        else :
+            self.solver.parameters.workmem.set(SolRep.WorkMem)
+            self.solver.parameters.dettimelimit.set(SolRep.DeterTimeOut) 
+            
+        int counter = 0
+        for p_k in points:
+            counter += 1
+            print ("using p_k: ", str(counter))
+            calculate(p_k, self.utopiaPlane.y_up,self.utopiaPlane.y_ub, self.utopiaPlane.y_lb)
+        print ("Find solution num: ", len(self.cplexSolutionSet))    
 
 if __name__ == "__main__":
     prob = MOIPProblem(4,43,3)  

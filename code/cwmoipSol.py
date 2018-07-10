@@ -197,7 +197,7 @@ class CwmoipSol(NaiveSol):
         self.solver.solve()
       
         rsltXvar = []
-        rsltObj = float("-inf")
+        rsltObj = float("+inf")
         rsltSolString = self.solver.solution.get_status_string()
         if(rsltSolString.find("optimal")>=0):
             #bug fixed here, rsltSol should not be returned as the constraints will be modified at the end of the method

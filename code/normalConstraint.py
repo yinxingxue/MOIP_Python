@@ -4,6 +4,7 @@ Created on Sat Jun 30 13:44:12 2018
 
 @author: Yinxing Xue
 """
+import random
 import numpy as np
 from moipSol import CplexSolResult
 from moipSol import BaseSol 
@@ -111,8 +112,10 @@ class UtopiaPlane():
         constCounter = 0 
         tempConstrList = []
         #add the temp inequation constraints to the solver
+        ineqlRS = []
+        rows = []
         for ineqlDic in sparseInequationsMapList:
-            rows = []
+           
             rs = float("-inf")
             variables = []
             coefficient = []
@@ -125,14 +128,15 @@ class UtopiaPlane():
             row=[]
             row.append(variables)
             row.append(coefficient)
-            rows.append(row)       
-            constCounter= constCounter+1
-            constName= 'new_c'+str(constCounter)
-            #indices: test purpose 
-            indices = cplex.linear_constraints.add(lin_expr = rows, senses = 'L', rhs = [rs], names = [constName] )
-            print (indices)
-            tempConstrList.append(constName)
+            rows.append(row)  
+            ineqlRS.append(rs)
+        #indices: test purpose 
+        indices = cplex.linear_constraints.add(lin_expr = rows, senses = 'L'*len(rows), rhs = ineqlRS)
+        #print (indices)
+        
         #add the temp equation constraints to the solver
+        eqlRS = []
+        rows = []
         for eqlDic in sparseEquationsMapList:
             rows = []
             rs = float("-inf")
@@ -147,13 +151,12 @@ class UtopiaPlane():
             row=[]
             row.append(variables)
             row.append(coefficient)
-            rows.append(row)       
-            constCounter= constCounter+1
-            constName= 'new_c'+str(constCounter)
-            #indices: test purpose 
-            indices = cplex.linear_constraints.add(lin_expr = rows, senses = 'E', rhs = [rs], names = [constName] )
-            print (indices)
-            tempConstrList.append(constName)
+            rows.append(row)   
+            eqlRS.append(rs)
+        #indices: test purpose 
+        indices = cplex.linear_constraints.add(lin_expr = rows, senses = 'E'*len(rows), rhs = eqlRS)
+        #print (indices)   
+            
         #reset the objective
         cplex.objective.set_name("tempObj")
         coff= target.tolist()
@@ -204,6 +207,9 @@ class SolRep():
     WorkMem = 2000
     DeterTimeOut = 10000
     XvarNames = None
+    
+    #the precision of generating random double between 0 and 1
+    PRE_RAND = 1e+6
     
     def __init__(self, y_up, varNo, n):
         #input
@@ -259,7 +265,7 @@ class SolRep():
         ini = np.random.randint(0,1000,size=[1,No])
         ini = ini / np.sum(ini)
         #debugging purpose
-        ini = [0.31501993797075767, 0.15640230394328755, 0.128046078865751, 0.40053167922020383]
+        #ini = [0.27834687389614976, 0.2571529494878135, 0.2991875662310138, 0.16531261038502296]
         X0 = np.dot(ini,self.y_up)
         p = X0 
         self.P.append(p)
@@ -268,7 +274,7 @@ class SolRep():
               mult = np.random.rand(1,No-1)
               mult = mult[0]
               #debugging purpose
-              mult = [0.14187423949758182, 0.6855104039583568, 0.5576721483410823]
+              #mult = [0.39541754214685954, 0.6591278732474594, 0.33765164373495815]
               mult = mult / np.linalg.norm (mult,2)
               D = np.dot(mult,V)
               
@@ -285,7 +291,116 @@ class SolRep():
               ff = np.zeros((1, Nv+No+1)) 
               ff = ff[0]
               ff[Nv+No] = 1.0
-        return 
+              
+              self.xVar = SolRep.XvarNames
+              (positiveRstVal, positiveRstStatus) = SolRep.mixintlinprog (cplex, self.xVar, ff, [] , [], tempAeq2,tempBeq2, lb,ub) 
+              (negativeRstVal, negativeRstStatus) = SolRep.mixintlinprog (cplex, self.xVar, ff * (-1), [] , [], tempAeq2,tempBeq2, lb,ub) 
+              if positiveRstStatus.find("optimal")> -1:
+                  lambda_l = positiveRstVal 
+              if negativeRstStatus.find("optimal")> -1:
+                  lambda_u = negativeRstVal * -1.0
+              
+              lambdaV = SolRep.unifrnd(lambda_l, lambda_u)
+              X0 = X0 + lambdaV * D
+              self.P.append(X0)
+        return self.P
+    
+    @classmethod
+    def unifrnd(cls,lambda_l, lambda_u): 
+        rand= random.uniform(0, SolRep.PRE_RAND)*1.0 / SolRep.PRE_RAND
+        range1= lambda_u- lambda_l
+        value= rand*range1+lambda_l
+        return value
+    
+    @classmethod  
+    def mixintlinprog(cls, cplex, xvar, ff, A2, B2, Aeq2, Beq2, lbs, ubs):
+        origiCplex = cplex 
+        if cplex == None:
+            try:
+                cplex = cplex.Cplex()
+                cplex.set_results_stream(None)
+                cplex.set_warning_stream(None)
+                cplex.set_error_stream(None)
+                cplex.parameters.timelimit.set(BaseSol.TimeOut)
+                cplex.parameters.dettimelimit.set(BaseSol.DeterTimeOut)
+            except CplexError as exc:
+                print ("Concert exception caught: ", exc.args)
+        if xvar == None:
+            var_names = ['x_'+str(i) for i in range(0,len(ff)) ]
+            var_types = 'C'* (len(ff))
+            cplex.variables.add(lb = lbs, ub = ubs, types = var_types, names = var_names) 
+            
+        # add ff as the coefficient for the objective
+        cplex.objective.set_name("tempObj")
+        coff= ff.tolist()
+        indics= list(range(0,len(ff)))
+        cplex.objective.set_linear(zip(indics,coff))
+        cplex.objective.set_sense(cplex.objective.sense.minimize)
+        
+        #the list to store the temp constraints
+        tempConstNames1 = []
+        constCounter = 0 
+        #add the temp extra inequation constraints to the solver
+        inEquationRows = []
+        for i in range(0,len(A2)):
+            ineqlDic= A2[i]
+            variables = []
+            coefficient = []
+            for key in ineqlDic: 
+                variables.append('x_'+str(key))
+                coefficient.append(ineqlDic[key])
+            row=[]
+            row.append(variables)
+            row.append(coefficient)
+            inEquationRows.append(row)  
+            constCounter= constCounter+1
+            constName= 'new_ie'+str(constCounter)
+            tempConstNames1.append(constName)
+        indices = cplex.linear_constraints.add(lin_expr = inEquationRows, senses = 'L'*len(A2), rhs =  B2, names = tempConstNames1)
+        #testing purpose
+        print (indices)
+        
+        tempConstNames2 = []
+        constCounter = 0 
+        #add the temp extra equation constraints to the solver
+        equationRows = []
+        for i in range(0,len(Aeq2)):
+            eqlDic= Aeq2[i]
+            variables = []
+            coefficient = []
+            for key in eqlDic: 
+                variables.append('x_'+str(key))
+                coefficient.append(eqlDic[key])
+            row=[]
+            row.append(variables)
+            row.append(coefficient)
+            equationRows.append(row)   
+            constCounter= constCounter+1
+            constName= 'new_e'+str(constCounter)
+            tempConstNames2.append(constName)
+        indices = cplex.linear_constraints.add(lin_expr = equationRows, senses = 'E'*len(Aeq2), rhs =  Beq2, names = tempConstNames2)
+        #testing purpose
+        print (indices)
+        
+        cplex.solve()
+        
+        rsltObj = float("inf")
+        rsltSolString = cplex.solution.get_status_string()
+        if(rsltSolString.find("optimal")>=0):
+            #bug fixed here, rsltSol should not be returned as the constraints will be modified at the end of the method
+            #rsltSol = self.solver.solution
+            rsltXvar = cplex.solution.get_values()
+            rsltObj =  cplex.solution.get_objective_value()
+        
+        if origiCplex == None:
+            cplex.end()
+        else:
+            #remove the temp constraints    
+            cplex.linear_constraints.delete(tempConstNames1)
+            cplex.linear_constraints.delete(tempConstNames2)
+        return (rsltObj,rsltSolString)
+       
+        
         
     def setParas(self, attributeMatrix, origi_A , origi_B, origi_Aeq, origi_Beq):
         self.attributeMatrix_in = attributeMatrix
@@ -330,6 +445,7 @@ class SolRep():
         var_types = 'C'* (Nv+No+1)
         solver.variables.add(lb = lbs, ub = ubs, types = var_types, names = var_names)    
         
+        #add the inequation constraints to the solver
         inEquationRows = []
         for i in range(0,len(a_in)):
             ineqlDic= a_in[i]
@@ -346,6 +462,7 @@ class SolRep():
         #testing purpose
         #print (indices)
       
+        #add the equation constraints to the solver
         equationRows = []
         for i in range(0,len(aeq_in)):
             eqlDic= aeq_in[i]
