@@ -89,12 +89,50 @@ class NcgopSol(CwmoipSol):
             self.solver.parameters.workmem.set(SolRep.WorkMem)
             self.solver.parameters.dettimelimit.set(SolRep.DeterTimeOut) 
             
-        int counter = 0
+        counter = 0
         for p_k in points:
             counter += 1
             print ("using p_k: ", str(counter))
             calculate(p_k, self.utopiaPlane.y_up,self.utopiaPlane.y_ub, self.utopiaPlane.y_lb)
-        print ("Find solution num: ", len(self.cplexSolutionSet))    
+        print ("Find solution num: ", len(self.cplexSolutionSet))   
+        
+    def  calculate(self, p_k, y_up, y_ub, y_lb):
+        fCWMOIP = float('nan')
+        No = self.objNo
+        Nv = self.varNv
+        
+        extra_A1 = []
+        objMatrix = np.array(self.moipProblem.attributeMatrix)
+        SolRep.appendToSparseMapList(extra_A1,objMatrix[0:No-1])
+        extra_B1 = p_k[0:No-1]
+        
+        lb = np.zeros((1,Nv))
+        lb = np.ones((1,Nv))
+        
+        ff = []
+        for i in range(No-1,-1,-1):
+            if i == No-1:
+                ff = objMatrix[i]
+            else:
+                w = 1.0 /(y_ub[i]-y_lb[i]+1)
+                ff = ff+ w*objMatrix[i]
+        
+        (rstStatusString, rstXvar, rstObj) = intlinprog (self.solver, self.xVar, objMatrix, extra_A1, extra_B1, [], [], lb, ub)
+        if(rstStatusString.find("optimal")>=0): 
+            newff = np.reshape(ff, (1, len(ff))
+            new_A1 = []
+            SolRep.appendToSparseMapList(new_A1,newff)
+            new_b1 = np.dot(rstXvar, newff)
+        if(rstStatusString.find("optimal")>=0): 
+            newff = np.reshape(ff, (1, len(ff))
+            cplexResults = CplexSolResult(rstXvar,rstStatusString,self.moipProblem)
+            self.addTocplexSolutionSetMap(cplexResults)
+            fCWMOIP = np.dot(rstXvar, newff)
+        return fCWMOIP
+    
+    @classmethod  
+    def intlinprog (cplex, xVar, objMatrix, extra_A1, extra_B1, extra_Aeq1, extra_Beq1, lb, ub):
+        
 
 if __name__ == "__main__":
     prob = MOIPProblem(4,43,3)  
