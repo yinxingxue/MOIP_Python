@@ -8,13 +8,13 @@ import math
 import numpy as np
 from moipProb import MOIPProblem 
 from moipSol import BaseSol
-from naiveSol import NaiveSol
 from cwmoipSol import CwmoipSol
 from normalConstraint import UtopiaPlane
 from normalConstraint import SolRep
 from moipSol import CplexSolResult
-from mooUtility import MOOUtility 
-from decimal import Decimal
+from cplex import Cplex
+from cplex.exceptions import CplexError
+
 
 
 class NcgopSol(CwmoipSol):  
@@ -93,7 +93,7 @@ class NcgopSol(CwmoipSol):
         for p_k in points:
             counter += 1
             print ("using p_k: ", str(counter))
-            calculate(p_k, self.utopiaPlane.y_up,self.utopiaPlane.y_ub, self.utopiaPlane.y_lb)
+            self.calculate(p_k, self.utopiaPlane.y_up,self.utopiaPlane.y_ub, self.utopiaPlane.y_lb)
         print ("Find solution num: ", len(self.cplexSolutionSet))   
         
     def  calculate(self, p_k, y_up, y_ub, y_lb):
@@ -106,8 +106,8 @@ class NcgopSol(CwmoipSol):
         SolRep.appendToSparseMapList(extra_A1,objMatrix[0:No-1])
         extra_B1 = p_k[0:No-1]
         
-        lb = np.zeros((1,Nv))
-        lb = np.ones((1,Nv))
+        ub = [1]*Nv
+        lb = [0]*Nv
         
         ff = []
         for i in range(No-1,-1,-1):
@@ -117,22 +117,108 @@ class NcgopSol(CwmoipSol):
                 w = 1.0 /(y_ub[i]-y_lb[i]+1)
                 ff = ff+ w*objMatrix[i]
         
-        (rstStatusString, rstXvar, rstObj) = intlinprog (self.solver, self.xVar, objMatrix, extra_A1, extra_B1, [], [], lb, ub)
+        (rstObj, rstXvar, rstStatusString) = NcgopSol.intlinprog (self.solver, self.xvar, ff, extra_A1, extra_B1, [], [], lb, ub)
         if(rstStatusString.find("optimal")>=0): 
-            newff = np.reshape(ff, (1, len(ff))
+            newff = np.reshape(ff, (1, len(ff)))
             new_A1 = []
             SolRep.appendToSparseMapList(new_A1,newff)
-            new_b1 = np.dot(rstXvar, newff)
+            new_b1 = np.dot(rstXvar, ff)
         if(rstStatusString.find("optimal")>=0): 
-            newff = np.reshape(ff, (1, len(ff))
+            #newff = np.reshape(ff, (1, len(ff)))
             cplexResults = CplexSolResult(rstXvar,rstStatusString,self.moipProblem)
             self.addTocplexSolutionSetMap(cplexResults)
-            fCWMOIP = np.dot(rstXvar, newff)
+            fCWMOIP = np.dot(rstXvar, ff)
         return fCWMOIP
     
     @classmethod  
-    def intlinprog (cplex, xVar, objMatrix, extra_A1, extra_B1, extra_Aeq1, extra_Beq1, lb, ub):
+    def intlinprog (cls, cplex, xVar, ff, extra_A1, extra_B1, extra_Aeq1, extra_Beq1, lbs, ubs):
+        origiCplex = cplex 
+        if cplex == None:
+            try:
+                cplex = cplex.Cplex()
+                cplex.set_results_stream(None)
+                cplex.set_warning_stream(None)
+                cplex.set_error_stream(None)
+                cplex.parameters.timelimit.set(BaseSol.TimeOut)
+                cplex.parameters.dettimelimit.set(BaseSol.DeterTimeOut)
+            except CplexError as exc:
+                print ("Concert exception caught: ", exc.args)
+        if xVar == None:
+            var_names = ['x'+str(i) for i in range(0,len(ff)) ]
+            #important it is type Binary
+            var_types = 'B'* (len(ff))
+            cplex.variables.add(lb = lbs, ub = ubs, types = var_types, names = var_names) 
+            
+        # add ff as the coefficient for the objective
+        cplex.objective.set_name("tempObj")
+        coff= ff.tolist()
+        indics= list(range(0,len(ff)))
+        cplex.objective.set_linear(zip(indics,coff))
+        cplex.objective.set_sense(cplex.objective.sense.minimize)
         
+        #the list to store the temp constraints
+        tempConstNames1 = []
+        constCounter = 0 
+        #add the temp extra inequation constraints to the solver
+        inEquationRows = []
+        for i in range(0,len(extra_A1)):
+            ineqlDic= extra_A1[i]
+            variables = []
+            coefficient = []
+            for key in ineqlDic: 
+                variables.append('x'+str(key))
+                coefficient.append(ineqlDic[key])
+            row=[]
+            row.append(variables)
+            row.append(coefficient)
+            inEquationRows.append(row)  
+            constCounter= constCounter+1
+            constName= 'new_ie'+str(constCounter)
+            tempConstNames1.append(constName)
+        indices = cplex.linear_constraints.add(lin_expr = inEquationRows, senses = 'L'*len(extra_A1), rhs =  extra_B1, names = tempConstNames1)
+        #testing purpose
+        print (indices)
+        
+        tempConstNames2 = []
+        constCounter = 0 
+        #add the temp extra equation constraints to the solver
+        equationRows = []
+        for i in range(0,len(extra_Aeq1)):
+            eqlDic= extra_Aeq1[i]
+            variables = []
+            coefficient = []
+            for key in eqlDic: 
+                variables.append('x'+str(key))
+                coefficient.append(eqlDic[key])
+            row=[]
+            row.append(variables)
+            row.append(coefficient)
+            equationRows.append(row)   
+            constCounter= constCounter+1
+            constName= 'new_e'+str(constCounter)
+            tempConstNames2.append(constName)
+        indices = cplex.linear_constraints.add(lin_expr = equationRows, senses = 'E'*len(extra_Aeq1), rhs =  extra_Beq1, names = tempConstNames2)
+        #testing purpose
+        print (indices)
+        
+        cplex.solve()
+        
+        rsltObj = float("inf")
+        rsltSolString = cplex.solution.get_status_string()
+        rsltXvar = []
+        if(rsltSolString.find("optimal")>=0):
+            #bug fixed here, rsltSol should not be returned as the constraints will be modified at the end of the method
+            #rsltSol = self.solver.solution
+            rsltXvar = cplex.solution.get_values()
+            rsltObj =  cplex.solution.get_objective_value()
+        
+        if origiCplex == None:
+            cplex.end()
+        else:
+            #remove the temp constraints    
+            cplex.linear_constraints.delete(tempConstNames1)
+            cplex.linear_constraints.delete(tempConstNames2)
+        return (rsltObj, rsltXvar, rsltSolString)
 
 if __name__ == "__main__":
     prob = MOIPProblem(4,43,3)  

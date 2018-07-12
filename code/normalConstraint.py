@@ -234,7 +234,7 @@ class SolRep():
         self.varNo = varNo
         self.n = n
         #output
-        self.P = [[]]
+        self.P = []
         self.xVar = []
         
     def calculate(self):
@@ -266,7 +266,7 @@ class SolRep():
         ini = ini / np.sum(ini)
         #debugging purpose
         #ini = [0.27834687389614976, 0.2571529494878135, 0.2991875662310138, 0.16531261038502296]
-        X0 = np.dot(ini,self.y_up)
+        X0 = np.dot(ini,self.y_up)[0]
         p = X0 
         self.P.append(p)
         
