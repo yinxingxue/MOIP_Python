@@ -358,7 +358,7 @@ class SolRep():
             tempConstNames1.append(constName)
         indices = cplex.linear_constraints.add(lin_expr = inEquationRows, senses = 'L'*len(A2), rhs =  B2, names = tempConstNames1)
         #testing purpose
-        print (indices)
+        #print (indices)
         
         tempConstNames2 = []
         constCounter = 0 
@@ -380,7 +380,7 @@ class SolRep():
             tempConstNames2.append(constName)
         indices = cplex.linear_constraints.add(lin_expr = equationRows, senses = 'E'*len(Aeq2), rhs =  Beq2, names = tempConstNames2)
         #testing purpose
-        print (indices)
+        #print (indices)
         
         cplex.solve()
         

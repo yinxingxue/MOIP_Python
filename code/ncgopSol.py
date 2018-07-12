@@ -12,6 +12,7 @@ from cwmoipSol import CwmoipSol
 from normalConstraint import UtopiaPlane
 from normalConstraint import SolRep
 from moipSol import CplexSolResult
+from mooUtility import MOOUtility 
 from cplex import Cplex
 from cplex.exceptions import CplexError
 
@@ -95,6 +96,13 @@ class NcgopSol(CwmoipSol):
             print ("using p_k: ", str(counter))
             self.calculate(p_k, self.utopiaPlane.y_up,self.utopiaPlane.y_ub, self.utopiaPlane.y_lb)
         print ("Find solution num: ", len(self.cplexSolutionSet))   
+        
+        inputPoints = [list(map(float,resultID.split('_'))) for resultID in self.cplexResultMap.keys()]
+        #debugging purpose
+        #print (inputPoints)
+        paretoPoints, dominatedPoints = MOOUtility.simple_cull(inputPoints,MOOUtility.dominates)
+        #print ("Pareto size: ", len(paretoPoints), " Pareto front: ",  paretoPoints)
+        self.cplexParetoSet= paretoPoints
         
     def  calculate(self, p_k, y_up, y_ub, y_lb):
         fCWMOIP = float('nan')

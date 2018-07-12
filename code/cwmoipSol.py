@@ -48,6 +48,13 @@ class CwmoipSol(NaiveSol):
         objMatrix = np.array(self.moipProblem.attributeMatrix)
         solutionMap = self.solveBySingleObj(self.sparseInequationsMapList,self.sparseEquationsMapList, objMatrix, objMatrix,k, solutionMap, self.cplexResultMap)
         
+        inputPoints = [list(map(float,resultID.split('_'))) for resultID in self.cplexResultMap.keys()]
+        #debugging purpose
+        #print (inputPoints)
+        paretoPoints, dominatedPoints = MOOUtility.simple_cull(inputPoints,MOOUtility.dominates)
+        #print ("Pareto size: ", len(paretoPoints), " Pareto front: ",  paretoPoints)
+        self.cplexParetoSet= paretoPoints
+        
     def solveBySingleObj(self, inequationsMapList,equationsMapList,  objMatIn, objMatOut,k, solutionMap, resultMap):
         solutionMapOut = {}
         lbs= np.zeros((1,self.moipProblem.featureCount))
