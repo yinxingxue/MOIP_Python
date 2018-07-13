@@ -53,7 +53,9 @@ class BaseSol:
             return
         cplexResults = CplexSolResult(self.solver.solution.get_values(),self.solver.solution.get_status_string(),self.moipProblem)
         self.addTocplexSolutionSetMap(cplexResults)
+        self.buildCplexPareto()
         
+    def buildCplexPareto(self):
         inputPoints = [list(map(float,resultID.split('_'))) for resultID in self.cplexResultMap.keys()]
         #debugging purpose
         #print (inputPoints)

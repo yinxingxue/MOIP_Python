@@ -96,13 +96,7 @@ class NcgopSol(CwmoipSol):
             print ("using p_k: ", str(counter))
             self.calculate(p_k, self.utopiaPlane.y_up,self.utopiaPlane.y_ub, self.utopiaPlane.y_lb)
         print ("Find solution num: ", len(self.cplexSolutionSet))   
-        
-        inputPoints = [list(map(float,resultID.split('_'))) for resultID in self.cplexResultMap.keys()]
-        #debugging purpose
-        #print (inputPoints)
-        paretoPoints, dominatedPoints = MOOUtility.simple_cull(inputPoints,MOOUtility.dominates)
-        #print ("Pareto size: ", len(paretoPoints), " Pareto front: ",  paretoPoints)
-        self.cplexParetoSet= paretoPoints
+        self.buildCplexPareto()
         
     def  calculate(self, p_k, y_up, y_ub, y_lb):
         fCWMOIP = float('nan')
@@ -185,7 +179,7 @@ class NcgopSol(CwmoipSol):
             tempConstNames1.append(constName)
         indices = cplex.linear_constraints.add(lin_expr = inEquationRows, senses = 'L'*len(extra_A1), rhs =  extra_B1, names = tempConstNames1)
         #testing purpose
-        print (indices)
+        #print (indices)
         
         tempConstNames2 = []
         constCounter = 0 
@@ -207,7 +201,7 @@ class NcgopSol(CwmoipSol):
             tempConstNames2.append(constName)
         indices = cplex.linear_constraints.add(lin_expr = equationRows, senses = 'E'*len(extra_Aeq1), rhs =  extra_Beq1, names = tempConstNames2)
         #testing purpose
-        print (indices)
+        #print (indices)
         
         cplex.solve()
         
@@ -232,7 +226,7 @@ if __name__ == "__main__":
     prob = MOIPProblem(4,43,3)  
     prob.displayObjectiveCount()
     prob.displayFeatureCount()
-    prob.exetractFromFile("../test/parameter_wp1.txt")
+    prob.exetractFromFile("../test/parameter_wp2.txt")
     prob.displayObjectives()
     prob.displayVariableNames()
     prob.displayObjectiveSparseMapList()
@@ -243,7 +237,7 @@ if __name__ == "__main__":
     sol= NcgopSol(prob)
     sol.prepare()
     sol.execute()
-    sol.outputCplexParetoMap("../result/Pareto_wp1.txt")
+    sol.outputCplexParetoMap("../result/Pareto_wp2.txt")
     sol.displaySolvingAttempts()
     sol.displayObjsBoundsDictionary()
     sol.displayCplexSolutionSetSize()

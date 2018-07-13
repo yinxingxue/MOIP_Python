@@ -69,12 +69,7 @@ class NaiveSol(BaseSol):
         print ("After the epsilon constraint, the adjusted UBs of the objective 2 to k: ", self.getSolverObjConstraintUBs())
         #debugging purpose
         #print (self.solveCounter)
-        inputPoints = [list(map(float,resultID.split('_'))) for resultID in self.cplexResultMap.keys()]
-        #debugging purpose
-        #print (inputPoints)
-        paretoPoints, dominatedPoints = MOOUtility.simple_cull(inputPoints,MOOUtility.dominates)
-        #print ("Pareto size: ", len(paretoPoints), " Pareto front: ",  paretoPoints)
-        self.cplexParetoSet= paretoPoints
+        self.buildCplexPareto()
         
         
     """
