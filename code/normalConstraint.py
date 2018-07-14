@@ -61,7 +61,7 @@ class UtopiaPlane():
                     """
                     debug purpose
                     """
-                    if i == 2 and j == 2:
+                    if i == 2 and j == 3:
                         solution = solutions[j]
                         cplexResult2 = CplexSolResult(solution[1],"optimal",self.moipProblem)
                         optSolution = cplexResult2

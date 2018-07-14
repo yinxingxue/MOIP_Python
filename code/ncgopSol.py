@@ -223,10 +223,10 @@ class NcgopSol(CwmoipSol):
         return (rsltObj, rsltXvar, rsltSolString)
 
 if __name__ == "__main__":
-    prob = MOIPProblem(4,43,3)  
+    prob = MOIPProblem(4,290,3)  
     prob.displayObjectiveCount()
     prob.displayFeatureCount()
-    prob.exetractFromFile("../test/parameter_wp2.txt")
+    prob.exetractFromFile("../test/parameter_eshop2.txt")
     prob.displayObjectives()
     prob.displayVariableNames()
     prob.displayObjectiveSparseMapList()
@@ -237,7 +237,7 @@ if __name__ == "__main__":
     sol= NcgopSol(prob)
     sol.prepare()
     sol.execute()
-    sol.outputCplexParetoMap("../result/Pareto_wp2.txt")
+    sol.outputCplexParetoMap("../result/parameter_eshop2.txt")
     sol.displaySolvingAttempts()
     sol.displayObjsBoundsDictionary()
     sol.displayCplexSolutionSetSize()
