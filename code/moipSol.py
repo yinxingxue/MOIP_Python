@@ -13,8 +13,8 @@ from cplex.exceptions import CplexError
 
 class BaseSol:
     'define the basic solution of a MOBIP'
-    TimeOut = 2000
-    DeterTimeOut = 2000
+    TimeOut = 5000
+    DeterTimeOut = 5000
     
     def __init__(self, moipProblem):
         #instance variable: the solver instance
@@ -71,8 +71,10 @@ class BaseSol:
         self.solver.set_results_stream(None)
         self.solver.set_warning_stream(None)
         self.solver.set_error_stream(None)
-        self.solver.parameters.timelimit.set(BaseSol.TimeOut)
-        self.solver.parameters.dettimelimit.set(BaseSol.DeterTimeOut)
+        #self.solver.parameters.timelimit.set(BaseSol.TimeOut)
+        #self.solver.parameters.dettimelimit.set(BaseSol.DeterTimeOut)
+        self.solver.parameters.threads.set(4)
+        self.solver.parameters.parallel.set(-1)
         self.solver.objective.set_sense(self.solver.objective.sense.minimize)
         self.ub = [1]*self.moipProblem.featureCount
         self.lb = [0]*self.moipProblem.featureCount

@@ -52,16 +52,24 @@ class UtopiaPlane():
             solution = solutions[0]
             optSolution = None
             cplexResult = CplexSolResult(solution[1],"optimal",self.moipProblem)
-            if cplexResult.getResultID() not in utopiaSols or len(solutions)==1:
+            if len(solutions)==1:
                 optSolution = cplexResult
                 utopiaSols[optSolution.getResultID()] = optSolution
+            elif cplexResult.getResultID() not in utopiaSols and len(solutions)> 1:
+                optSolution = cplexResult
+                for j in range(0,len(solutions)):
+                    solution = solutions[j]
+                    cplexResult2 = CplexSolResult(solution[1],"optimal",self.moipProblem)
+                    if j == 0:     
+                        optSolution = cplexResult2                        
+                utopiaSols[optSolution.getResultID()] = optSolution    
             elif cplexResult.getResultID() in utopiaSols and len(solutions)>1:            
                 best = float("+inf")
                 for j in range(1,len(solutions)):
                     """
                     debug purpose
                     """
-                    if i == 2 and j == 3:
+                    if i == 2 and j == 1:
                         solution = solutions[j]
                         cplexResult2 = CplexSolResult(solution[1],"optimal",self.moipProblem)
                         optSolution = cplexResult2
@@ -303,6 +311,7 @@ class SolRep():
               lambdaV = SolRep.unifrnd(lambda_l, lambda_u)
               X0 = X0 + lambdaV * D
               self.P.append(X0)
+              print ("add i: ", X0 )
         return self.P
     
     @classmethod
