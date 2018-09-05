@@ -42,9 +42,9 @@ class CwmoipSol(NaiveSol):
         k = len(self.moipProblem.attributeMatrix)
         solutionMap={}
         #swap the 3rd and 4th obj for testing purpose
-        temp = self.moipProblem.attributeMatrix[2]
-        self.moipProblem.attributeMatrix[2] =  self.moipProblem.attributeMatrix[3] 
-        self.moipProblem.attributeMatrix[3] = temp
+        #temp = self.moipProblem.attributeMatrix[2]
+        #self.moipProblem.attributeMatrix[2] =  self.moipProblem.attributeMatrix[3] 
+        #self.moipProblem.attributeMatrix[3] = temp
         objMatrix = np.array(self.moipProblem.attributeMatrix)
         solutionMap = self.solveBySingleObj(self.sparseInequationsMapList,self.sparseEquationsMapList, objMatrix, objMatrix,k, solutionMap, self.cplexResultMap)
         self.buildCplexPareto()
@@ -210,10 +210,10 @@ class CwmoipSol(NaiveSol):
         return (rsltObj,rsltXvar,rsltSolString)
  
 if __name__ == "__main__":
-    prob = MOIPProblem(4,43,3)  
+    prob = MOIPProblem(4,12,3)  
     prob.displayObjectiveCount()
     prob.displayFeatureCount()
-    prob.exetractFromFile("../test/parameter_wp4.txt")
+    prob.exetractFromFile("../test/parameter_js1.txt")
     prob.displayObjectives()
     prob.displayVariableNames()
     prob.displayObjectiveSparseMapList()
@@ -224,7 +224,7 @@ if __name__ == "__main__":
     sol= CwmoipSol(prob)
     sol.prepare()
     sol.execute()
-    sol.outputCplexParetoMap("../result/Pareto_wp4.txt")
+    sol.outputCplexParetoMap("../result/Pareto_js1.txt")
     sol.displaySolvingAttempts()
     sol.displayObjsBoundsDictionary()
     sol.displayCplexSolutionSetSize()

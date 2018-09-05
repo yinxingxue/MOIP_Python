@@ -40,7 +40,10 @@ class MOOUtility():
         return paretoPoints, dominatedPoints
     
     def dominates(row, candidateRow):
-        return sum([row[x] >= candidateRow[x] for x in range(len(row))]) == len(row)   
+        #return sum([row[x] >= candidateRow[x] for x in range(len(row))]) == len(row)   
+        #bug fixed here, we are doing for minimal 
+        return sum([row[x] <= candidateRow[x] for x in range(len(row))]) == len(row)  
+        
     
     @classmethod
     def round(cls, value):

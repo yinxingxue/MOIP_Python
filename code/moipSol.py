@@ -88,6 +88,7 @@ class BaseSol:
         constCounter =0 
         self.constrIndexList =[]
         #add the inequation constraints to the solver
+        ineqlDic=None
         for ineqlDic in self.moipProblem.sparseInequationsMapList:
             rows = []
             rs = float("-inf")
@@ -107,8 +108,10 @@ class BaseSol:
             constName= 'c'+str(constCounter)
             indices = self.solver.linear_constraints.add(lin_expr = rows, senses = 'L', rhs = [rs], names = [constName] )
             self.constrIndexList.append(indices)
-        del(ineqlDic)
+        if ineqlDic!=None:
+            del(ineqlDic)
         #add the equation constraints to the solver
+        eqlDic=None
         for eqlDic in self.moipProblem.sparseEquationsMapList:
             rows = []
             rs = float("-inf")
@@ -128,7 +131,8 @@ class BaseSol:
             constName= 'c'+str(constCounter)
             indices = self.solver.linear_constraints.add(lin_expr = rows, senses = 'E', rhs = [rs], names = [constName] )
             self.constrIndexList.append(indices)
-        del(eqlDic)
+        if eqlDic!=None:
+            del(eqlDic)
         #for debugging purpose
         #print (self.constrIndexList)
         #for debugging purpose
@@ -161,6 +165,12 @@ class BaseSol:
         
     def displayCplexResultMap(self):
         print ("Cplex Results Map: %s" % self.cplexResultMap.keys()) 
+        
+    def displayFullCplexResultMap(self):
+        print ("Cplex Results Map: ")
+        for key in self.cplexResultMap.keys():
+            cplexResult = self.cplexResultMap[key]
+            print(key,": ", cplexResult.xvar)
         
     def displayCplexParetoSet(self):
         print ("Total Pareto size: ", len(self.cplexParetoSet))
